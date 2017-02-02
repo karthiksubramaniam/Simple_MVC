@@ -1,0 +1,169 @@
+﻿@model List<Employee_Details.Models.employee_details>
+
+@{
+    ViewBag.Title = "Home Page";
+}
+@Scripts.Render("~/bundles/jquery")
+<style>
+.invalid {
+    border-style: solid !important;
+    border-width: 2px !important;
+    border-color: red !important;
+}
+.red {
+    color:red;
+}
+</style>
+<div class="jumbotron">
+    <h3>Employee Details Grid</h3>
+    <div class="col-sm-12">
+        <table border="1" id="employeegrid" class="col-sm-12">
+            <tr class="trheader">
+                <th>Name <span class="red">*</span></th>
+                <th>Salary</th>
+                <th>Experience</th>
+                <th>Designation <span class="red">*</span></th>
+                <th>Date of Joining <span class="red">*</span></th>
+                <th>Action</th>
+            </tr>
+            @foreach (var item in Model)
+            {
+                <tr id="@item.pkid">
+                    <td>@Html.TextBoxFor(x => item.name, new { @disabled = "true", @class = "col-sm-12 namevalidate" })</td>
+                    <td>@Html.TextBoxFor(x => item.salary, new { @disabled = "true", @class = "col-sm-12 salvalidate" })</td>
+                    <td>@Html.TextBoxFor(x => item.yearofexp, new { @disabled = "true", @class = "col-sm-12 yearvalidate" })</td>
+                    <td>@Html.TextBoxFor(x => item.designation, new { @disabled = "true", @class = "col-sm-12 desigvalidate" })</td>
+                    <td>@Html.TextBox("joindate", item.joineddate != null ? item.joineddate.Value.ToShortDateString() : "", new { @disabled = "true", @class = "col-sm-12 datevalidate" })</td>
+                    <td>
+                        <a href="#" class="edit glyphicon glyphicon-edit" pk-id="@item.pkid"></a> &nbsp;
+                        <a href="#" class="del glyphicon glyphicon-trash" pk-id="@item.pkid"></a>
+                    </td>
+                </tr>
+            }
+        </table>
+    </div>
+    <div class="col-sm-12">&nbsp;</div>
+    <div class="col-sm-12">
+        <a href="#" class="col-sm-3 glyphicon glyphicon-edit add">
+            New Employee
+        </a>
+        <a href="#" class="col-sm-3 glyphicon glyphicon-floppy-disk save">
+            Save
+        </a>
+    </div>
+</div>
+
+<script>
+    function fn_DateValidate(value) {
+        var pattern = new RegExp(/^(0?[1-9]|[12][0-9]|3[01])[\/\-](0?[1-9]|1[012])[\/\-]\d{4}$/);
+        var match = pattern.exec(value);
+        if (match == null)
+            return false;
+        return true;
+    }
+    function fn_NameValidate(value) {
+        var pattern = new RegExp(/^[A-Za-z\.\ ]+$/);
+        var match = pattern.exec(value);
+        if (match == null)
+            return false;
+        return true;
+    }
+    function fn_SalValidate(value) {
+        var pattern = new RegExp(/^([\d]{0,7}|(\d{0,7}\.\d{1,2}))?$/);
+        var match = pattern.exec(value);
+        if (match == null)
+            return false;
+        return true;
+    }
+    function fn_YearValidate(value) {
+        var pattern = new RegExp(/^([\d]{0,2}|(\d{0,1}\.\d{0,1}))?$/);
+        var match = pattern.exec(value);
+        if (match == null)
+            return false;
+        return true;
+    }
+
+    $(function () {
+        $('.edit').click(function () {
+            $('#' + $(this).attr('pk-id') + ' input').removeAttr('disabled');
+        });
+        $('.add').click(function () {
+            $('#employeegrid').append('<tr><td><input class="col-sm-12 namevalidate" type="text" /></td><td><input class="col-sm-12 salvalidate" type="text" /></td><td><input class="col-sm-12 yearvalidate" type="text" /></td><td><input class="col-sm-12 namevalidate" type="text" /></td><td><input class="col-sm-12 datevalidate" type="text" /></td><td></td></tr>');
+        });
+        $('.save').click(function () {
+            if (!$('#employeegrid td').children('input').hasClass('invalid')) {
+                var rowNumber = 0;
+                var empDetails = [];
+                $('#employeegrid tr').each(function () {
+                    if (!$(this).hasClass('trheader') && $(this).find('.namevalidate').val() != "") {
+                        empDetails.push({
+                            pkid: $(this).attr('id') == undefined ? 0 : $(this).attr('id'),
+                            name: $(this).find('.namevalidate').val(),
+                            salary: $(this).find('.salvalidate').val(),
+                            yearofexp: $(this).find('.yearvalidate').val(),
+                            designation: $(this).find('.desigvalidate').val() == undefined ? "" : $(this).find('.desigvalidate').val(),
+                            joineddate: $(this).find('.datevalidate').val(),
+                        });
+                    }
+                });
+                $.ajax({
+                    url: "@Url.Action("Save","Home")",
+                    type: 'POST',
+                    data: JSON.stringify({ 'empObject': empDetails }),
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+                    success: function () {
+                        alert('success');
+                        window.location.reload();
+                    },
+                    error: function () {
+                        window.location.reload();
+                    }
+                });
+            }
+            else {
+                alert('Please Enter the valid details');
+            }
+        });
+        $('.del').click(function () {
+            $.ajax({
+                url: "@Url.Action("Delete","Home")",
+                type: 'POST',
+                data: "{'pkid':'" + $(this).attr('pk-id') + "'}",
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function () {
+                    alert('success');
+                    window.location.reload();
+                },
+                error: function () {
+                    window.location.reload();
+                }
+            });
+        });
+        $('#employeegrid').on('change focusout', '.namevalidate,.desigvalidate', function () {
+            if (!fn_NameValidate($(this).val()))
+                $(this).addClass('invalid');
+            else
+                $(this).removeClass('invalid');
+        });
+        $('#employeegrid').on('change focusout', '.salvalidate', function () {
+            if (!fn_SalValidate($(this).val()))
+                $(this).addClass('invalid');
+            else
+                $(this).removeClass('invalid');
+        });
+        $('#employeegrid').on('change focusout', '.yearvalidate', function () {
+            if (!fn_YearValidate($(this).val()))
+                $(this).addClass('invalid');
+            else
+                $(this).removeClass('invalid');
+        });
+        $('#employeegrid').on('change focusout', '.datevalidate', function () {
+            if (!fn_DateValidate($(this).val()))
+                $(this).addClass('invalid');
+            else
+                $(this).removeClass('invalid');
+        });
+    });
+</script>
